@@ -1,0 +1,1 @@
+dir /b /AD > MovieFolders.txt
