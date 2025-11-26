@@ -15,9 +15,9 @@ def process_video_with_subtitles(movie_path=None, subtitle_path=None):
     if movie_path is None or subtitle_path is None:
         print("Please enter the file paths.")
         if movie_path is None:
-            movie_path = input('Enter Movie File Path [ "E:\\Videos\\" ]: ')
+            movie_path = input('Enter Movie File Path [ "F:\\Videos\\" ]: ')
         if subtitle_path is None:
-            subtitle_path = input('Enter Subtitle File Path [ "E:\\Videos\\" ]: ')
+            subtitle_path = input('Enter Subtitle File Path [ "F:\\Videos\\" ]: ')
 
     # --- 2. File Path Processing (Equivalent to Batch's 'for %%F in... do set') ---
     try:
@@ -75,7 +75,7 @@ def process_video_with_subtitles(movie_path=None, subtitle_path=None):
     # The Python implementation will follow the original Batch logic:
     if number_of_audio_channels > 2:
         # This maps all streams from the input file (0) and all streams from the subtitle file (1)
-        audio_codec_param = ['-map', '0', '-map', '1']
+        audio_codec_param = ['-map', '0:v', '-map', '0:a', '-map', '1:s']
 
     # --- 5. Determine Subtitle Channels (The batch script's method is flawed/incomplete) ---
     # The Batch script attempts to count subtitle channels but reuses the 'NumberOfAudioChannels' variable
@@ -94,6 +94,8 @@ def process_video_with_subtitles(movie_path=None, subtitle_path=None):
         '-sub_charenc', 'ISO8859-9',  # Character encoding for subtitles
         '-i', subtitle_path,
         '-c:v', 'copy',              # Video: copy (no re-encoding)
+        '-metadata:s:s:2', 'language=eng',  # Set subtitle language to English
+        '-metadata:s:s:2', 'title="English"',  # Set subtitle title to English
         *audio_codec_param,          # Audio parameters determined above
         output_movie_path            # Output file path
     ]
