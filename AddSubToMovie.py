@@ -4,7 +4,90 @@ import sys
 import subprocess
 import csv
 
-default_folder_path = "F:\\Videos\\"
+def get_operating_system():
+    platforms = {
+        'linux': 'Linux',
+        'darwin': 'macOS',
+        'win32': 'Windows'
+    }
+    if sys.platform in platforms:
+        return platforms[sys.platform]
+    else:
+        return sys.platform
+
+def get_config_file_path():
+    if get_operating_system() == 'Windows':
+        config_file_path = os.path.join(os.getenv('APPDATA'), 'AddSubToMovies', 'config.txt')
+    elif get_operating_system() in ['Linux', 'macOS']:
+        config_file_path = os.path.join("/home/user/Movies", 'config.txt')
+    return config_file_path
+
+def check_get_default_folder_path_in_config():
+    config_file_path = get_config_file_path()
+    if os.path.isfile(config_file_path):
+        with open(config_file_path, 'r') as config_file:
+            for line in config_file:
+                if line.startswith('default_folder_path='):
+                    return line.split('=', 1)[1].strip()
+    return None
+
+def select_folder_path():
+    if get_operating_system() == 'Windows':
+        eg_text = " (e.g., D:\\Movies)"
+    elif get_operating_system() in ['Linux', 'macOS']:
+        eg_text = " (e.g., /home/user/Movies)"
+    config_file_path = get_config_file_path()
+    inputed_folder_path = input(f"Enter the default folder path for movies {eg_text}: ").strip()
+    selected_folder_path = os.path.normpath(inputed_folder_path)  # Normalize the path for Linux/macOS
+    return selected_folder_path, config_file_path
+
+def set_default_folder(default_folder_path):
+    if default_folder_path == None:
+        selected_folder_path, config_file_path = select_folder_path()
+    if not os.path.isfile(config_file_path):
+        # Get the directory name from the full path
+        config_dir = os.path.dirname(config_file_path)
+        # Create the directory if it doesn't exist
+        if not os.path.exists(config_dir):
+            os.makedirs(config_dir)
+        with open(config_file_path, 'w') as config_file:
+            config_file.write(f"default_folder_path={selected_folder_path}")
+        print(f"Config file created at {config_file_path} with default folder path.")
+    
+    if os.path.isfile(config_file_path):
+        with open(config_file_path, 'r') as config_file:
+            for line in config_file:
+                if line.startswith('default_folder_path='):
+                    print(f"Default folder path set to: {line.split('=', 1)[1].strip()}")
+                    return line.split('=', 1)[1].strip()
+
+def check_ffmpeg_installed():
+    try:
+        subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, check=True)
+        subprocess.run(['ffprobe', '-version'], capture_output=True, text=True, check=True)
+        return True
+    except FileNotFoundError:
+        return False
+    
+def ensure_ffmpeg_installed():
+    if not check_ffmpeg_installed():
+        print("FFMPEG or FFPROBE is not installed or not found in PATH.")
+        print("Please install FFMPEG and ensure it's added to your system's PATH environment variable.")
+        print("You can download it from: https://ffmpeg.org/download.html")
+        sys.exit(1)
+
+def process_video_from_csv_list(csv_file_path):
+    if not os.path.isfile(csv_file_path):
+        print(f"CSV file not found: {csv_file_path}")
+        return
+    
+    with open(csv_file_path, 'r', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            movie_path = row['MoviePath']
+            subtitle_path = row['SubtitlePath']
+            print(f"\nProcessing Movie: {movie_path} with Subtitle: {subtitle_path}")
+            add_subtitle_to_video(movie_path, subtitle_path)
 
 def list_movies_in_folder_to_csv(default_folder_path):
     # List folders
@@ -151,8 +234,7 @@ def select_subtitle_file_from_folder(movie_path):
         print("No subtitle files found in the folder.")
         return
 
-
-def process_video_with_subtitles(movie_path=None, subtitle_path=None):
+def add_subtitle_to_video(movie_path=None, subtitle_path=None):
     """
     Embeds a subtitle file into a video file using ffprobe and ffmpeg.
 
@@ -291,17 +373,24 @@ def process_video_with_subtitles(movie_path=None, subtitle_path=None):
 
 
 if __name__ == "__main__":
+    ensure_ffmpeg_installed()
+    
+    if check_get_default_folder_path_in_config() is None:
+        set_default_folder(None)
     print("Select an option:")
     print("1. Process video with subtitles")
     print("2. List movies in folder and their subtitle status to CSV")
+    print("3. Change default folder path")
     choice = input("Enter choice (1 or 2): ").strip()
     if choice == '1':
         # Check for command line arguments (Equivalent to Batch's '%1' and '%2')
         movie_path_arg = sys.argv[1] if len(sys.argv) > 1 else None
         subtitle_path_arg = sys.argv[2] if len(sys.argv) > 2 else None
         # Run the main function
-        process_video_with_subtitles(movie_path_arg, subtitle_path_arg)
+        add_subtitle_to_video(movie_path_arg, subtitle_path_arg)
     elif choice == '2':
-        list_movies_in_folder_to_csv(default_folder_path)
+        list_movies_in_folder_to_csv(check_get_default_folder_path_in_config())
+    elif choice == '3':
+        set_default_folder(None)
     else:
         print("Invalid choice.")
