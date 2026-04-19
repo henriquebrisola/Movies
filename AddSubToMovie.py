@@ -90,8 +90,20 @@ def process_videos_from_csv_list(csv_folder_path):
         for row in reader:
             movie_path = row['MoviePath']
             subtitle_path = row['SubtitlePath']
-            print(f"\nProcessing Movie: {movie_path} with Subtitle: {subtitle_path}")
-            add_subtitle_to_video(movie_path, subtitle_path)
+            Has_English_Text_Subtitles = row['Has English Text Subtitles']
+            if os.path.isfile(movie_path) and Has_English_Text_Subtitles == 'No' and os.path.isfile(subtitle_path):
+                print(f"\nProcessing Movie: {movie_path} with Subtitle: {subtitle_path}")
+                add_subtitle_to_video(movie_path, subtitle_path)
+                continue
+            if not os.path.isfile(movie_path):
+                print(f"Movie file not found: {movie_path}. Skipping.")
+            if subtitle_path == '':
+                print(f"No subtitle path provided for movie: {movie_path}. Skipping.")
+            if not os.path.isfile(subtitle_path):
+                print(f"Subtitle file not found: {subtitle_path}. Skipping.")
+            if Has_English_Text_Subtitles == 'Yes':
+                print(f"Movie {movie_path} already have English text subtitles according to CSV. Skipping.")
+
 
 def export_movies_in_folder_to_csv(default_folder_path):
     # List folders
@@ -102,6 +114,7 @@ def export_movies_in_folder_to_csv(default_folder_path):
     folders_movies_subtitle_status = {}
     text_codecs = ['subrip', 'ass', 'ssa', 'webvtt', 'mov_text', 'srt']
 
+    movies_status = []
     for folder in folders:
         print("Checking folder:", folder)
         folder_path = os.path.join(default_folder_path, folder)
@@ -110,15 +123,14 @@ def export_movies_in_folder_to_csv(default_folder_path):
                        and f.endswith(('.mp4', '.mkv'))
                        and not f.startswith('SRT-')]
 
-        has_srt_in_folder = any(f.startswith('SRT-') for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f)))
+        has_processed_movie_in_folder = any(f.startswith('SRT-') for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f)))
 
-        movies_status = []
         for movie in movie_files:
             print("  Checking movie:", movie)
             movie_path = os.path.join(folder_path, movie)
             has_english_text_sub = False
 
-            if has_srt_in_folder:
+            if has_processed_movie_in_folder:
                 has_english_text_sub = True
             else:
                 try:
@@ -145,10 +157,20 @@ def export_movies_in_folder_to_csv(default_folder_path):
                     has_english_text_sub = False
                 except Exception as e:
                     print(f"Error occurred while checking {movie}: {e}")
+            
+            for f in os.listdir(folder_path):
+                if f.endswith(('.srt')) and os.path.isfile(os.path.join(folder_path, f)):
+                    subtitle_file_path = os.path.join(folder_path, f)
+                    break
+                else:
+                    subtitle_file_path = ''
 
             movies_status.append({
+                'folder': folder,
                 'movie': movie,
-                'has_english_text_sub': has_english_text_sub
+                'MoviePath': movie_path,
+                'SubtitlePath': subtitle_file_path,
+                'has_english_text_sub': has_english_text_sub,
             })
 
         folders_movies_subtitle_status[folder] = movies_status
@@ -156,10 +178,10 @@ def export_movies_in_folder_to_csv(default_folder_path):
     csv_path = os.path.join(default_folder_path, 'movies_subtitle_status.csv')
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['Folder', 'Movie', 'Has English Text Subtitles'])
-        for folder, movies in folders_movies_subtitle_status.items():
-            for item in movies:
-                writer.writerow([folder, item['movie'], 'Yes' if item['has_english_text_sub'] else 'No'])
+        writer.writerow(['Folder', 'Movie', 'MoviePath', 'SubtitlePath', 'Has English Text Subtitles'])
+        for movie, rows in folders_movies_subtitle_status.items():
+            for row in rows:
+                writer.writerow([row['folder'], row['movie'], row['MoviePath'], row['SubtitlePath'], 'Yes' if row['has_english_text_sub'] else 'No'])
 
     print(f"Results saved to {csv_path}")
 
