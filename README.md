@@ -1,6 +1,6 @@
-This repo contains scripts to insert TV-supported subtitles to video files using ffmpeg
-Formats supported: .mp4 and .mkv
+This repo contains scripts to insert TV-supported subtitles to video files using ffmpeg<br />
+Formats supported: .mp4 and .mkv<br />
 
-image-based subtitles are removed from original files
-source files are not changed
-destination files are saved on the same folder with SRT- prefix
+image-based subtitles are removed from original files<br />
+source files are not changed<br />
+destination files are saved on the same folder with SRT- prefix<br />
