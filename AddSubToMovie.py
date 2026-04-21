@@ -152,7 +152,7 @@ def export_movies_in_folder_to_csv(default_folder_path):
 
                     text_codecs = ['subrip', 'ass', 'ssa', 'webvtt', 'mov_text', 'srt']
                     languages = ['eng', 'Inglês', 'English', 'en']
-                    result = subprocess.run(ffprobe_command, capture_output=True, text=True, check=True)
+                    result = subprocess.run(ffprobe_command, capture_output=True, text=True, check=True, encoding='utf-8')
                     if result.stdout:
                         for line in result.stdout.splitlines():
                             if line.startswith('codec_name='):
