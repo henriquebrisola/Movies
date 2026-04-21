@@ -79,11 +79,17 @@ def ensure_ffmpeg_installed():
         print("You can download it from: https://ffmpeg.org/download.html")
         sys.exit(1)
 
-def process_videos_from_csv_list(csv_folder_path):
+def process_videos_from_csv_list(csv_folder_path, skip_update_csv_list_movies=False):
     csv_file_path = os.path.join(csv_folder_path, 'movies_subtitle_status.csv')
     if not os.path.isfile(csv_file_path):
-        print(f"CSV file not found: {csv_file_path}")
-        return
+        print(f"CSV file not found at: {csv_file_path}")
+        print("Creating CSV file with current movies and subtitle status in the folder...")
+        export_movies_in_folder_to_csv(check_get_default_folder_path_in_config())
+    elif not skip_update_csv_list_movies:
+        print("CSV file found. Updating video statuses to the list...")
+        export_movies_in_folder_to_csv(check_get_default_folder_path_in_config())
+    else:
+        print("CSV file found. Skipping update of video statuses to the list as per flag.")
     
     with open(csv_file_path, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
@@ -93,7 +99,7 @@ def process_videos_from_csv_list(csv_folder_path):
             Has_English_Text_Subtitles = row['Has English Text Subtitles']
             if os.path.isfile(movie_path) and Has_English_Text_Subtitles == 'No' and os.path.isfile(subtitle_path):
                 print(f"\nProcessing Movie: {movie_path} with Subtitle: {subtitle_path}")
-                add_subtitle_to_video(movie_path, subtitle_path)
+                add_subtitle_to_video(check_get_default_folder_path_in_config(), movie_path, subtitle_path)
                 continue
             if not os.path.isfile(movie_path):
                 print(f"Movie file not found: {movie_path}. Skipping.")
@@ -103,7 +109,6 @@ def process_videos_from_csv_list(csv_folder_path):
                 print(f"Subtitle file not found: {subtitle_path}. Skipping.")
             if Has_English_Text_Subtitles == 'Yes':
                 print(f"Movie {movie_path} already have English text subtitles according to CSV. Skipping.")
-
 
 def export_movies_in_folder_to_csv(default_folder_path):
     # List folders
@@ -390,10 +395,6 @@ def add_subtitle_to_video(folder_path, movie_path=None, subtitle_path=None):
         except FileNotFoundError:
             print("\nERROR: FFMPEG or FFPROBE command not found.")
             print("Please ensure 'ffmpeg' and 'ffprobe' are installed and accessible in your system's PATH.")
-
-    # --- 8. Wait for user input before closing (Equivalent to Batch's 'pause') ---
-    input("\nPress Enter to exit...")
-
 
 if __name__ == "__main__":
     ensure_ffmpeg_installed() # Check if FFMPEG is installed before proceeding
