@@ -117,7 +117,6 @@ def export_movies_in_folder_to_csv(default_folder_path):
                and not f.startswith('SRT-')]
 
     folders_movies_subtitle_status = {}
-    text_codecs = ['subrip', 'ass', 'ssa', 'webvtt', 'mov_text', 'srt']
 
     movies_status = []
     for folder in folders:
@@ -146,17 +145,31 @@ def export_movies_in_folder_to_csv(default_folder_path):
                         '-select_streams', 's',
                         '-v', '0'
                     ]
-                    result = subprocess.run(ffprobe_command, capture_output=True, text=True, check=True)
+                    
                     codec = None
+                    language = None
+                    subtitle_index = 1
+
+                    text_codecs = ['subrip', 'ass', 'ssa', 'webvtt', 'mov_text', 'srt']
+                    languages = ['eng', 'Inglês', 'English', 'en']
+                    result = subprocess.run(ffprobe_command, capture_output=True, text=True, check=True)
                     if result.stdout:
                         for line in result.stdout.splitlines():
                             if line.startswith('codec_name='):
                                 codec = line.split('=', 1)[1]
-                            elif line.startswith('language=') and codec:
-                                lang = line.split('=', 1)[1]
-                                if lang == 'eng' and codec in text_codecs:
-                                    has_english_text_sub = True
-                                    break
+                            if line.startswith('language=') or line.startswith('TAG:language='):
+                                language = line.split('=', 1)[1]
+                            if language in languages and codec in text_codecs:
+                                has_english_text_sub = True
+                                break
+                            if line == "[/STREAM]": # cleans up after each subtitle language
+                                if language not in languages or codec not in text_codecs:
+                                    print(f"    Found subtitle stream with codec: {codec} and language: {language} over index: {subtitle_index}, but it does not meet criteria for English text subtitles.")
+                                if language in languages and codec in text_codecs:
+                                    print(f"    Found subtitle stream with codec: {codec} and language: {language} over index: {subtitle_index}, it does meet criteria for English text subtitles.")
+                                subtitle_index += 1
+                                codec = None
+                                language = None
                 except subprocess.CalledProcessError:
                     # If ffprobe fails, assume no subs
                     has_english_text_sub = False
