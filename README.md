@@ -7,3 +7,5 @@ destination files are saved on the same folder with SRT- prefix<br />
 detects if source file has text-based subtitles in english<br />
 
 detection of text-based subtitles still require improvements<br />
+
+example of codecs for image-based subtitles: hdmv_pgs_subtitle
