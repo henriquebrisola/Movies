@@ -44,30 +44,92 @@ def select_folder_path():
 
 def set_default_folder(default_folder_path):
     config_file_path = check_get_default_folder_path_in_config()
+    if config_file_path is not None:
+        if os.path.isfile(config_file_path):
+            with open(config_file_path, 'r') as config_file:
+                for line in config_file:
+                    if line.startswith('default_folder_path='):
+                        print(f"Default folder path currently set to: {line.split('=', 1)[1].strip()}")
+                        return line.split('=', 1)[1].strip()
+                
+    if config_file_path is None or default_folder_path is None:
+        selected_folder_path, config_file_path = select_folder_path()
+
+
+    write_config_file(f"default_folder_path={selected_folder_path}")
+
+def write_config_file(incomming_config):
+    config_file_path = get_config_file_path()
+    config_dir = os.path.dirname(config_file_path)
+    outgoing_config_key_value = []
+    found_config_key_in_file = False
+    # Read existing config file if it exists and update the value for the incoming config key, otherwise add the new key-value pair
     if os.path.isfile(config_file_path):
         with open(config_file_path, 'r') as config_file:
             for line in config_file:
-                if line.startswith('default_folder_path='):
-                    print(f"Default folder path currently set to: {line.split('=', 1)[1].strip()}")
-                    return line.split('=', 1)[1].strip()
-                
-    if default_folder_path == None:
-        selected_folder_path, config_file_path = select_folder_path()
-
-    # Get the directory name from the full path
-    config_dir = os.path.dirname(config_file_path)
-    # Create the directory if it doesn't exist
+                current_config_key = line.split('=')[0]
+                current_config_value = line.split('=')[1]
+                if current_config_key + '=' in incomming_config:
+                    print(f"Config {current_config_key} currently set to: {current_config_value.strip()}")
+                    outgoing_config_key_value.append(incomming_config)
+                    found_config_key_in_file = True
+                if current_config_key + '=' not in incomming_config:
+                    outgoing_config_key_value.append(line)
+            if not found_config_key_in_file:
+                outgoing_config_key_value.append(incomming_config)
+    # Remove trailing newline from the last line if it exists
+    for index, line in enumerate(outgoing_config_key_value):
+        if (index != len(outgoing_config_key_value) - 1) and not line.endswith('\n'):
+             outgoing_config_key_value[index] = line + '\n'
+        elif (index == len(outgoing_config_key_value) - 1) and line.endswith('\n'):
+            outgoing_config_key_value[index] = line.strip('\n')
+    print(f"Config to be written: {(''.join(outgoing_config_key_value))}")
     if not os.path.exists(config_dir):
         os.makedirs(config_dir)
     with open(config_file_path, 'w') as config_file:
-        config_file.write(f"default_folder_path={selected_folder_path}")
-    print(f"Config file created at {config_file_path} with default folder path set to {selected_folder_path}")
-    
+        config_file.write(''.join(outgoing_config_key_value))
+    print(f"Config file created at {config_file_path} with the following content:\n{''.join(outgoing_config_key_value)}")
+
+def get_text_codecs_config():
+    config_file_path = get_config_file_path()
+    if os.path.isfile(config_file_path):
+        with open(config_file_path, 'r') as config_file:
+            for line in config_file:
+                if line.startswith('text_codecs='):
+                    print(f"Text codecs found in config: {line.split('=', 1)[1].strip()}")
+                    return line.split('=', 1)[1].strip().split(',')
+    return None
+
+def get_languages_config():
+    config_file_path = get_config_file_path()
+    if os.path.isfile(config_file_path):
+        with open(config_file_path, 'r') as config_file:
+            for line in config_file:
+                if line.startswith('languages='):
+                    print(f"Languages found in config: {line.split('=', 1)[1].strip()}")
+                    return line.split('=', 1)[1].strip().split(',')
+    return None
+
+def set_default_text_codecs_in_config_if_not_exists(skip_input=False):
+    if get_text_codecs_config() is None:
+        text_codecs = ['subrip', 'ass', 'ssa', 'webvtt', 'mov_text', 'srt']
+        write_config_file('text_codecs=' + ','.join(text_codecs))
+    elif not skip_input:
+        text_codecs = input("Enter the text codecs (comma-separated): ").split(',')
+        write_config_file('text_codecs=' + ','.join(text_codecs))
+
+def set_default_languages_in_config_if_not_exists(skip_input=False):
+    if get_languages_config() is None:
+        languages = ['eng', 'Inglês', 'English', 'en']
+        write_config_file('languages=' + ','.join(languages))
+    elif not skip_input:
+        languages = input("Enter the languages (comma-separated): ").split(',')
+        write_config_file('languages=' + ','.join(languages))
 
 def check_ffmpeg_installed():
     try:
-        subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, check=True)
-        subprocess.run(['ffprobe', '-version'], capture_output=True, text=True, check=True)
+        subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, check=True, encoding='utf-8')
+        subprocess.run(['ffprobe', '-version'], capture_output=True, text=True, check=True, encoding='utf-8')
         return True
     except FileNotFoundError:
         return False
@@ -150,8 +212,8 @@ def export_movies_in_folder_to_csv(default_folder_path):
                     language = None
                     subtitle_index = 1
 
-                    text_codecs = ['subrip', 'ass', 'ssa', 'webvtt', 'mov_text', 'srt']
-                    languages = ['eng', 'Inglês', 'English', 'en']
+                    text_codecs = get_text_codecs_config()
+                    languages = get_languages_config()
                     result = subprocess.run(ffprobe_command, capture_output=True, text=True, check=True, encoding='utf-8')
                     if result.stdout:
                         for line in result.stdout.splitlines():
@@ -416,6 +478,9 @@ if __name__ == "__main__":
     if check_get_default_folder_path_in_config() is None: # If no default folder path is set in config, prompt user to set it
         set_default_folder(None)
     
+    set_default_text_codecs_in_config_if_not_exists(skip_input=True) # If no text codecs are set in config, prompt user to set default text codecs
+    set_default_languages_in_config_if_not_exists(skip_input=True) # If no languages are set in config, prompt user to set default languages
+    
     while True: # Loop to allow user to choose different options until they choose to exit
         print("\n=== Add Subtitles to Movies Script ===")
         print("Select an option:")
@@ -424,7 +489,9 @@ if __name__ == "__main__":
         print("3. Process videos from CSV list")
         print("4. Change default folder path")
         print("5. Get default folder path")
-        print("6. Exit")
+        print("6. Set default text codecs in config")
+        print("7. Set default languages in config")
+        print("8. Exit")
         choice = input("Enter choice number: ").strip()
         if choice == '1':
             # Check for command line arguments (Equivalent to Batch's '%1' and '%2')
@@ -445,6 +512,10 @@ if __name__ == "__main__":
             else:
                 print("No default folder path set.")
         elif choice == '6':
+            set_default_text_codecs_in_config_if_not_exists()
+        elif choice == '7':
+            set_default_languages_in_config_if_not_exists()
+        elif choice == '8':
             print("Exiting the script. Goodbye!")
             break
         else:
