@@ -173,15 +173,12 @@ def export_movies_in_folder_to_csv(default_folder_path):
                 'has_english_text_sub': has_english_text_sub,
             })
 
-        folders_movies_subtitle_status[folder] = movies_status
-
     csv_path = os.path.join(default_folder_path, 'movies_subtitle_status.csv')
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['Folder', 'Movie', 'MoviePath', 'SubtitlePath', 'Has English Text Subtitles'])
-        for movie, rows in folders_movies_subtitle_status.items():
-            for row in rows:
-                writer.writerow([row['folder'], row['movie'], row['MoviePath'], row['SubtitlePath'], 'Yes' if row['has_english_text_sub'] else 'No'])
+        for row in movies_status:
+            writer.writerow([row['folder'], row['movie'], row['MoviePath'], row['SubtitlePath'], 'Yes' if row['has_english_text_sub'] else 'No'])
 
     print(f"Results saved to {csv_path}")
 
