@@ -161,7 +161,6 @@ def export_movies_in_folder_to_csv(default_folder_path):
                                 language = line.split('=', 1)[1]
                             if language in languages and codec in text_codecs:
                                 has_english_text_sub = True
-                                break
                             if line == "[/STREAM]": # cleans up after each subtitle language
                                 if language not in languages or codec not in text_codecs:
                                     print(f"    Found subtitle stream with codec: {codec} and language: {language} over index: {subtitle_index}, but it does not meet criteria for English text subtitles.")
@@ -173,6 +172,8 @@ def export_movies_in_folder_to_csv(default_folder_path):
                 except subprocess.CalledProcessError:
                     # If ffprobe fails, assume no subs
                     has_english_text_sub = False
+                except UnicodeDecodeError:
+                    print("UnicodeDecodeError")
                 except Exception as e:
                     print(f"Error occurred while checking {movie}: {e}")
             
