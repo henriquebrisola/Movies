@@ -173,6 +173,10 @@ def process_videos_from_csv_list(csv_folder_path, skip_update_csv_list_movies=Fa
             if Has_English_Text_Subtitles == 'Yes':
                 print(f"Movie {movie_path} already have English text subtitles according to CSV. Skipping.")
 
+    if not skip_update_csv_list_movies:
+        print("Updating video statuses to the list...")
+        export_movies_in_folder_to_csv(check_get_default_folder_path_in_config())
+
 def export_movies_in_folder_to_csv(default_folder_path):
     # List folders
     folders = [f for f in os.listdir(default_folder_path)
