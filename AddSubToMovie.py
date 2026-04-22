@@ -1,3 +1,4 @@
+from ast import pattern
 from importlib.resources import files
 import os
 import sys
@@ -156,8 +157,8 @@ def process_videos_from_csv_list(csv_folder_path, skip_update_csv_list_movies=Fa
     with open(csv_file_path, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            movie_path = row['MoviePath']
-            subtitle_path = row['SubtitlePath']
+            movie_path = row['Movie Path']
+            subtitle_path = row['Subtitle Path']
             Has_English_Text_Subtitles = row['Has English Text Subtitles']
             if os.path.isfile(movie_path) and Has_English_Text_Subtitles == 'No' and os.path.isfile(subtitle_path):
                 print(f"\nProcessing Movie: {movie_path} with Subtitle: {subtitle_path}")
@@ -191,9 +192,9 @@ def export_movies_in_folder_to_csv(default_folder_path):
 
         has_processed_movie_in_folder = any(f.startswith('SRT-') for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f)))
 
-        for movie in movie_files:
-            print("  Checking movie:", movie)
-            movie_path = os.path.join(folder_path, movie)
+        for movie_file in movie_files:
+            print("  Checking movie:", movie_file)
+            movie_path = os.path.join(folder_path, movie_file)
             has_english_text_sub = False
 
             if has_processed_movie_in_folder:
@@ -237,7 +238,7 @@ def export_movies_in_folder_to_csv(default_folder_path):
                 except UnicodeDecodeError:
                     print("UnicodeDecodeError")
                 except Exception as e:
-                    print(f"Error occurred while checking {movie}: {e}")
+                    print(f"Error occurred while checking {movie_file}: {e}")
             
             for f in os.listdir(folder_path):
                 if f.endswith(('.srt')) and os.path.isfile(os.path.join(folder_path, f)):
@@ -245,10 +246,26 @@ def export_movies_in_folder_to_csv(default_folder_path):
                     break
                 else:
                     subtitle_file_path = ''
+            
+            # Extract movie name from folder name
+            # Removes years, resolution, and other common patterns from folder names to get a cleaner movie name for the CSV output
+            # identifies words that are not part of the movie name and removes them, such as years (e.g., 1999, 2005), resolutions (e.g., 1080p, 720p), and common tags (e.g., BluRay, WEBRip)
+            year_pattern = []
+            for year in range(1900, 2101):
+                year_pattern.append(f"{year}")
+            movie_name = folder.split('(')[0].split('[')[0].strip()  # Remove anything after '(' or '[' to get a cleaner movie name
+            for pattern in year_pattern:
+                if pattern == movie_name:
+                    break
+                if pattern in movie_name:
+                    movie_name = movie_name.split(pattern)[0]
+            movie_name = movie_name.replace('.', ' ').replace('_', ' ').strip()
+            #movie_name = ' '.join(word for word in movie_name.split() if not (word.isdigit() and len(word) == 4) and word not in ['1080p', '720p', 'BluRay', 'WEBRip'])
 
             movies_status.append({
                 'folder': folder,
-                'movie': movie,
+                'movie_name': movie_name,
+                'movie_file': movie_file,
                 'MoviePath': movie_path,
                 'SubtitlePath': subtitle_file_path,
                 'has_english_text_sub': has_english_text_sub,
@@ -257,9 +274,9 @@ def export_movies_in_folder_to_csv(default_folder_path):
     csv_path = os.path.join(default_folder_path, 'movies_subtitle_status.csv')
     with open(csv_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['Folder', 'Movie', 'MoviePath', 'SubtitlePath', 'Has English Text Subtitles'])
+        writer.writerow(['Folder', 'Movie Name', 'Movie File', 'Movie Path', 'Subtitle Path', 'Has English Text Subtitles'])
         for row in movies_status:
-            writer.writerow([row['folder'], row['movie'], row['MoviePath'], row['SubtitlePath'], 'Yes' if row['has_english_text_sub'] else 'No'])
+            writer.writerow([row['folder'], row['movie_name'], row['movie_file'], row['MoviePath'], row['SubtitlePath'], 'Yes' if row['has_english_text_sub'] else 'No'])
 
     print(f"Results saved to {csv_path}")
 
