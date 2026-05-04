@@ -432,16 +432,10 @@ def add_subtitle_to_video(folder_path, movie_path=None, subtitle_path=None):
 
     print(f"Number of Audio Channels: {number_of_audio_channels}")
 
-    # --- 4. Set Audio Codec Parameter (Equivalent to Batch's 'IF %NumberOfAudioChannels% gtr 2') ---
-    audio_codec_param = ['-c:a', 'copy']
-    # The batch script's logic for gtr 2 (greater than 2) uses a different approach:
-    # IF %NumberOfAudioChannels% gtr 2 ( SET "AudioCodecParam=-map 0 -map 1" )
-    # This logic seems to be an attempt to force stream mapping when channels > 2 (e.g., 5.1, 7.1)
-    # The Python implementation will follow the original Batch logic:
-    if number_of_audio_channels > 2:
-        # This maps all streams from the input file (0) and all streams from the subtitle file (1)
-        # v = video, a = audio, s = subtitles.
-        audio_codec_param = ['-map', '0:v', '-map', '0:a', '-map', '1:s']
+    # --- 4. Removes all other subtitles, keeps all audio and video streams
+    # This maps all streams from the input file (0) and all streams from the subtitle file (1)
+    # v = video, a = audio, s = subtitles.
+    audio_codec_param = ['-map', '0:v', '-map', '0:a', '-map', '1:s']
 
 
     # --- 5. Construct and Execute FFMPEG Command (Equivalent to Batch's 'IF %MovieExt% == ...') ---
@@ -591,7 +585,8 @@ if __name__ == "__main__":
         print("5. Get default folder path")
         print("6. Set default text codecs in config")
         print("7. Set default languages in config")
-        print("8. Exit")
+        print("8. Run a function manually (e.g., export_english_pgs_subtitles_streams_to_sup_file(r\"E:\\Videos\\Kill la Kill [1080] - Copy\"))")
+        print("9. Exit")
         choice = input("Enter choice number: ").strip()
         if choice == '1':
             # Check for command line arguments (Equivalent to Batch's '%1' and '%2')
@@ -616,6 +611,19 @@ if __name__ == "__main__":
         elif choice == '7':
             set_default_languages_in_config_if_not_exists()
         elif choice == '8':
+            print("Enter function to run (press Enter on an empty line to finish):")
+            lines = []
+            while True:
+                line = input()
+                if not line:
+                    break
+                lines.append(line)
+            function_name = "\n".join(lines)
+            try:
+                exec(function_name)
+            except Exception as e:
+                print(f"Error running function: {e}")
+        elif choice == '9':
             print("Exiting the script. Goodbye!")
             break
         else:
