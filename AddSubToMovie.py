@@ -454,6 +454,7 @@ def add_subtitle_to_video(folder_path, movie_path=None, subtitle_path=None):
         '-metadata:s:s:2', 'language=eng',  # Set subtitle language to English
         '-metadata:s:s:2', 'title="English"',  # Set subtitle title to English
         *audio_codec_param,          # Audio parameters determined above
+        '-y',                         # Overwrite output file if it already exists
         output_movie_path            # Output file path
     ]
 
@@ -493,7 +494,85 @@ def add_subtitle_to_video(folder_path, movie_path=None, subtitle_path=None):
             print("\nERROR: FFMPEG or FFPROBE command not found.")
             print("Please ensure 'ffmpeg' and 'ffprobe' are installed and accessible in your system's PATH.")
 
+def get_english_pgs_subtitles_streams(movie_path):
+    # get video-type substitles streams info using ffprobe and return a list of subtitle stream indexes that are in English
+    pgs_codec = 'hdmv_pgs_subtitle'
+    languages = get_languages_config()
+    ffprobe_command = [
+        'ffprobe',
+        '-i', movie_path,
+        '-show_entries', 'stream=index,codec_name:stream_tags=language',
+        '-select_streams', 's',
+        '-of', 'json',
+        '-v', '0'
+    ]
+    try:
+        result = subprocess.run(ffprobe_command, capture_output=True, text=True, check=True)
+        subtitle_streams_info = []
+        if result.stdout:
+            import json
+            ffprobe_output = json.loads(result.stdout)
+            for stream in ffprobe_output.get('streams', []):
+                codec = stream.get('codec_name')
+                language = stream.get('tags', {}).get('language') or stream.get('language')
+                index = stream.get('index')
+                if language in languages and codec in pgs_codec:
+                    subtitle_streams_info.append({'index': index, 'codec': codec, 'language': language})
+        return subtitle_streams_info
+    except subprocess.CalledProcessError as e:
+        print(f"Error running ffprobe: {e.stderr.strip()}")
+        return []
+    except json.JSONDecodeError:
+        print("Error decoding ffprobe output as JSON.")
+        return []
+
+def export_english_pgs_subtitles_streams_to_sup_file(movie_path):
+    if os.path.isfile(movie_path):
+        video_files_in_folder = [movie_path]
+    else:
+        video_files_in_folder = list_video_files_in_folder(movie_path)
+    for movie_file_path in video_files_in_folder:
+        subtitle_streams = get_english_pgs_subtitles_streams(movie_file_path)
+        if not subtitle_streams:
+            print(f"No English PGS subtitle streams found for {movie_file_path}.")
+            continue
+        # Extract the first English PGS subtitle stream to a .sup file using ffmpeg
+        stream_index = subtitle_streams[0]['index']
+        output_sup_path = os.path.splitext(movie_file_path)[0] + '_english_pgs_subtitles.sup'
+        ffmpeg_command = [
+            'ffmpeg',
+            '-i', movie_file_path,
+            '-map', f'0:s:{stream_index}?',
+            '-c:s', 'copy',
+            '-y',                         # Overwrite output file if it already exists
+            output_sup_path
+        ]   
+        try:
+            subprocess.run(ffmpeg_command, check=True)
+            print(f"Extracted English PGS subtitles to {output_sup_path}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error extracting subtitles with ffmpeg: {e.stderr.strip()}")
+        except FileNotFoundError:
+            print("\nERROR: FFMPEG command not found.")
+            print("Please ensure 'ffmpeg' is installed and accessible in your system's PATH.")
+
+def list_video_files_in_folder(folder_path):
+    if not folder_path:
+        folder_path = input("Enter the folder path to list video files: ").strip()
+    if not os.path.isdir(folder_path):
+        print(f"Invalid folder path: {folder_path}")
+        return []
+    video_extensions = ('.mp4', '.mkv')
+    video_files = []
+    for root, _, files in os.walk(folder_path):
+        for f in files:
+            if f.endswith(video_extensions):
+                video_files.append(os.path.join(root, f))
+    return video_files
+
 if __name__ == "__main__":
+    #export_english_pgs_subtitles_streams_to_sup_file(r"E:\Videos\Kill la Kill [1080] - Copy")
+
     ensure_ffmpeg_installed() # Check if FFMPEG is installed before proceeding
     
     if check_get_default_folder_path_in_config() is None: # If no default folder path is set in config, prompt user to set it
