@@ -447,6 +447,7 @@ def add_subtitle_to_video(folder_path, movie_path=None, subtitle_path=None):
         '-c:v', 'copy',              # Video: copy (no re-encoding)
         '-metadata:s:s:2', 'language=eng',  # Set subtitle language to English
         '-metadata:s:s:2', 'title="English"',  # Set subtitle title to English
+        '-metadata', f'title={movie_name}',
         *audio_codec_param,          # Audio parameters determined above
         '-y',                         # Overwrite output file if it already exists
         output_movie_path            # Output file path

@@ -1,0 +1,6 @@
+from AddSubToMovie import *
+
+#add_subtitle_to_video(r"E:\Videos\Kill la Kill [1080] - Copy\6\[Cleo]Kill_la_Kill_-_06_(Dual Audio_10bit_BD1080p_x265).mkv", r"E:\Videos\Kill la Kill [1080] - Copy\6\[Cleo]Kill_la_Kill_-_06_(Dual Audio_10bit_BD1080p_x265).mkv")
+
+for video in list_video_files_in_folder(r"E:\Videos\Kill la Kill [1080] - Copy"):
+    add_subtitle_to_video(video, video)
