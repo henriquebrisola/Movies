@@ -521,7 +521,7 @@ def get_english_pgs_subtitles_streams(movie_path):
         print("Error decoding ffprobe output as JSON.")
         return []
 
-def export_english_pgs_subtitles_streams_to_sup_file(movie_path):
+def export_each_english_pgs_subtitles_stream_to_sup_file(movie_path):
     if os.path.isfile(movie_path):
         video_files_in_folder = [movie_path]
     else:
@@ -531,25 +531,26 @@ def export_english_pgs_subtitles_streams_to_sup_file(movie_path):
         if not subtitle_streams:
             print(f"No English PGS subtitle streams found for {movie_file_path}.")
             continue
-        # Extract the first English PGS subtitle stream to a .sup file using ffmpeg
-        stream_index = subtitle_streams[0]['index']
-        output_sup_path = os.path.splitext(movie_file_path)[0] + '_english_pgs_subtitles.sup'
-        ffmpeg_command = [
-            'ffmpeg',
-            '-i', movie_file_path,
-            '-map', f'0:s:{stream_index}?',
-            '-c:s', 'copy',
-            '-y',                         # Overwrite output file if it already exists
-            output_sup_path
-        ]   
-        try:
-            subprocess.run(ffmpeg_command, check=True)
-            print(f"Extracted English PGS subtitles to {output_sup_path}")
-        except subprocess.CalledProcessError as e:
-            print(f"Error extracting subtitles with ffmpeg: {e.stderr.strip()}")
-        except FileNotFoundError:
-            print("\nERROR: FFMPEG command not found.")
-            print("Please ensure 'ffmpeg' is installed and accessible in your system's PATH.")
+        # Extract each English PGS subtitle stream to a .sup file using ffmpeg
+        for subtitle_stream in subtitle_streams:
+            stream_index = subtitle_stream['index']
+            output_sup_path = os.path.splitext(movie_file_path)[0] + f'_english_pgs_subtitles_{stream_index}.sup'
+            ffmpeg_command = [
+                'ffmpeg',
+                '-i', movie_file_path,
+                '-map', f'0:{stream_index}', # Map the specific subtitle stream by index, with '?' to avoid errors if the stream is missing
+                '-c:s', 'copy',
+                '-y',                         # Overwrite output file if it already exists
+                output_sup_path
+            ]   
+            try:
+                subprocess.run(ffmpeg_command, check=True)
+                print(f"Extracted English PGS subtitles to {output_sup_path}")
+            except subprocess.CalledProcessError as e:
+                print(f"Error extracting subtitles with ffmpeg: {e.stderr.strip()}")
+            except FileNotFoundError:
+                print("\nERROR: FFMPEG command not found.")
+                print("Please ensure 'ffmpeg' is installed and accessible in your system's PATH.")
 
 def list_video_files_in_folder(folder_path):
     if not folder_path:
